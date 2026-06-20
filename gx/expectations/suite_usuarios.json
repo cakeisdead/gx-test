@@ -1,0 +1,60 @@
+{
+  "expectations": [
+    {
+      "id": "16b59489-d06c-46b9-b50e-7f268d907f4e",
+      "kwargs": {
+        "max_value": 100,
+        "min_value": 2
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_table_row_count_to_be_between"
+    },
+    {
+      "id": "3f63063f-f6c0-4473-900c-60d4402d23bc",
+      "kwargs": {
+        "column": "id_usuario"
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_not_be_null"
+    },
+    {
+      "id": "6afe92f0-0799-449c-bb51-4aa7360f0b3f",
+      "kwargs": {
+        "column": "email",
+        "mostly": 0.85
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_not_be_null"
+    },
+    {
+      "id": "abb86e3d-0849-4ed6-8b8f-f638312f1371",
+      "kwargs": {
+        "column": "edad",
+        "max_value": 120.0,
+        "min_value": 18.0
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "8415af42-9dfe-4c0e-95e6-a560b2d06f81",
+      "kwargs": {
+        "column": "email",
+        "regex": "^[^@]+@[^@]+\\.[^@]+$"
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_match_regex"
+    }
+  ],
+  "id": "d49266de-e516-443e-841f-852477345abd",
+  "meta": {
+    "great_expectations_version": "1.18.1"
+  },
+  "name": "suite_usuarios",
+  "notes": null
+}

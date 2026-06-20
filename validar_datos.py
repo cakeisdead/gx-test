@@ -2,70 +2,53 @@ import great_expectations as gx
 import pandas as pd
 
 
-def evaluar_archivo(ruta_archivo):
-    print(f"\n--- Analizando: {ruta_archivo} ---")
+def evaluar_archivo(ruta_archivo, nombre_suite):
+    print(f"\n--- 🔍 Iniciando Control de Calidad para: {ruta_archivo} ---")
 
-    # 1. Obtener el contexto efímero
-    context = gx.get_context(mode="ephemeral")
+    # 1. Cargar el contexto físico (GX detecta automáticamente la carpeta ./gx)
+    context = gx.get_context(mode="file")
 
-    # 2. Conectar los datos
+    # 2. Leer los datos del pipeline (el CSV)
     df = pd.read_csv(ruta_archivo)
-    data_source = context.data_sources.add_pandas(name="mi_fuente_pandas")
-    data_asset = data_source.add_dataframe_asset(name="usuarios")
 
-    # 3. Crear el lote (Batch)
+    # 3. Conectar el DataFrame dinámicamente al contexto
+    # Usamos nombres únicos por archivo para evitar colisiones en memoria
+    nombre_asset = ruta_archivo.replace(".", "_").replace("/", "_")
+    data_source = context.data_sources.add_pandas(
+        name=f"source_{nombre_asset}")
+    data_asset = data_source.add_dataframe_asset(name=nombre_asset)
+
     batch_definition = data_asset.add_batch_definition_whole_dataframe("todo")
     batch = batch_definition.get_batch(batch_parameters={"dataframe": df})
 
-    # 4. Crear la suite de reglas
-    suite = context.suites.add(gx.ExpectationSuite(name="suite_usuarios"))
+    # 4. RECUPERAR LAS REGLAS DEL DISCO (La suite JSON)
+    try:
+        suite = context.suites.get(name=nombre_suite)
+        print(
+            f"📖 Suite '{nombre_suite}' cargada exitosamente desde el catálogo.")
+    except Exception as e:
+        print(
+            f"❌ Error: No se encontró la suite '{nombre_suite}' en ./gx/expectations/")
+        return
 
-    # --- NUEVA REGLA 1: Validación de Volumen (Row Count) ---
-    # Esperamos que el archivo tenga entre 2 y 100 filas.
-    # Si llega un archivo vacío (0) o con una explosión de datos inusual, fallará.
-    suite.add_expectation(gx.expectations.ExpectTableRowCountToBeBetween(
-        min_value=2,
-        max_value=100
-    ))
-
-    # --- NUEVA REGLA 2: Tasa de Nulos (Null Rate / Completeness) ---
-    # Para 'id_usuario' exigimos el 100% de completitud (no definimos mostly, por defecto es 1.0)
-    suite.add_expectation(
-        gx.expectations.ExpectColumnValuesToNotBeNull(column="id_usuario"))
-
-    # Para 'email', supongamos que el negocio acepta que falte el correo en máximo 15% de los casos.
-    # Usamos mostly=0.85 (Al menos el 85% de las filas DEBEN tener email).
-    suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(
-        column="email",
-        mostly=0.85
-    ))
-
-    # --- Reglas previas (Formato y Rangos) ---
-    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
-        column="edad", min_value=18, max_value=120))
-    suite.add_expectation(gx.expectations.ExpectColumnValuesToMatchRegex(
-        column="email",
-        regex=r"^[^@]+@[^@]+\.[^@]+$"
-    ))
-
-    # 5. Ejecutar la validación
+    # 5. EJECUTAR VALIDACIÓN
     resultado = batch.validate(suite)
 
-    # 6. Mostrar resultado en consola
+    # 6. Procesar Resultados (Lógica Fail-Fast para tus Pipelines)
     if resultado.success:
         print("✅ ¡Éxito! Los datos cumplen con todos los estándares de calidad.")
     else:
         print("❌ ¡Alerta! Se encontraron problemas de calidad de datos.")
+
+        # Iterar sobre las reglas que fallaron para dar un reporte detallado
         for res in resultado.results:
             if not res.success:
                 config = res.expectation_config
                 tipo_regla = config.type if config else "Desconocida"
                 columna = config.kwargs.get('column') if config and config.kwargs.get(
-                    'column') else "Nivel de Tabla (Métrica Global)"
+                    'column') else "Métrica Global"
 
-                print(f"  - Falló la regla: {tipo_regla} en '{columna}'")
-
-                # Detalles específicos si es un fallo de registros individuales u omitidos
+                print(f"  - Falló: {tipo_regla} en '{columna}'")
                 if res.result.get('unexpected_count') is not None:
                     print(
                         f"    Detalle: {res.result.get('unexpected_count')} registros inválidos de {res.result.get('element_count')}.")
@@ -74,6 +57,10 @@ def evaluar_archivo(ruta_archivo):
                         f"    Valor observado: {res.result.get('observed_value')}")
 
 
-# Ejecutar con tus archivos de prueba
-evaluar_archivo("usuarios_buenos.csv")
-evaluar_archivo("usuarios_malos.csv")
+# ==============================================================================
+# EJECUCIÓN DEL PIPELINE
+# ==============================================================================
+if __name__ == "__main__":
+    # Ejecutamos la misma suite de producción contra ambos archivos
+    evaluar_archivo("usuarios_buenos.csv", nombre_suite="suite_usuarios")
+    evaluar_archivo("usuarios_malos.csv", nombre_suite="suite_usuarios")

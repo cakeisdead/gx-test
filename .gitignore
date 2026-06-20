@@ -1,3 +1,19 @@
+# ==============================================================================
+# Great Expectations (GX V1) Exclusions
+# ==============================================================================
+# Archivos de caché e historial local de ejecuciones
+gx/uncommitted/
+gx/checkpoints/.gx_internal/
+
+# Reportes locales generados (Data Docs)
+# Es mejor no subirlos a Git ya que cambian en cada validación local.
+# En producción, estos HTML se guardan automáticamente en un bucket (GCS/S3).
+gx/uncommitted/data_docs/
+
+# Archivos de configuración con credenciales (si aplica en el futuro)
+# Si almacenas variables de entorno o accesos a bases de datos localmente.
+gx/config/secrets_*.yml
+
 *.csv
 
 # Byte-compiled / optimized / DLL files
